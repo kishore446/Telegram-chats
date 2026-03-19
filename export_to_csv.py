@@ -28,6 +28,9 @@ try:
     with TelegramClient(config.session_name, config.api_id, config.api_hash) as client, \
          open(OUTPUT_FILE, 'w', newline='', encoding='utf-8') as f:
 
+        # Populate Telethon's entity cache so numeric channel IDs resolve correctly
+        client.get_dialogs()
+
         writer = csv.writer(f)
         writer.writerow(['channel', 'id', 'date', 'sender_id', 'sender_name', 'is_bot', 'text'])
 
