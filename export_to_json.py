@@ -1,13 +1,15 @@
-# export_to_json.py — Export Telegram channel messages to messages.json
+# export_to_json.py — Export Telegram channel messages to JSON files
 # Requires: pip install telethon
 # Configure credentials in config.py before running.
 
 import json
 import os
+import re
 from telethon.sync import TelegramClient
 import config
 
-OUTPUT_FILE = os.path.join(config.output_dir, 'messages.json') if config.output_dir else 'messages.json'
+output_base = getattr(config, 'output_dir', '')
+OUTPUT_FILE = os.path.join(output_base, 'messages.json') if output_base else 'messages.json'
 
 # Resolve channel list (supports both `channels` list and legacy `channel` single value)
 channels = getattr(config, 'channels', None)
@@ -66,8 +68,21 @@ try:
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
         json.dump(all_messages, f, ensure_ascii=False, indent=2)
 
+    saved_files = [OUTPUT_FILE]
+
+    # Write per-channel files
+    for channel_key, messages in all_messages.items():
+        safe_name = re.sub(r'[^\w\-]', '_', channel_key)
+        per_channel_file = os.path.join(output_base, f'channel_{safe_name}.json') if output_base else f'channel_{safe_name}.json'
+        with open(per_channel_file, 'w', encoding='utf-8') as f:
+            json.dump(messages, f, ensure_ascii=False, indent=2)
+        saved_files.append(per_channel_file)
+
     total = sum(len(v) for v in all_messages.values())
-    print(f"\nDone! {total} messages total saved to {OUTPUT_FILE}")
+    print(f"\nDone! {total} messages total")
+    print("Files saved:")
+    for saved in saved_files:
+        print(f"  {saved}")
 
 except Exception as e:
     print(f"Error: {e}")
