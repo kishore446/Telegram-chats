@@ -63,6 +63,7 @@ SESSION_NAME=anon
 SKIP_BOTS=False
 ONLY_BOTS=False
 OUTPUT_DIR=
+MAX_FILE_SIZE_KB=500
 ```
 
 > ⚠️ **Never share or commit your `.env` file.** It is already listed in `.gitignore` and will not be included in git commits.
@@ -152,6 +153,34 @@ Each export script creates **two sets of files**:
 The per-channel files make it easy to open just the messages from a specific channel. All files are saved to `OUTPUT_DIR` if configured.
 
 > ⚠️ If the specified directory does not exist, a warning is printed and files are saved to the current directory instead.
+
+---
+
+## 📏 Auto-Split Large Files
+
+By default, any export file larger than **500 KB** is automatically split into smaller numbered parts so they can be opened on mobile apps like Google Sheets.
+
+| Original file | → Split into |
+|---|---|
+| `messages.csv` (> 500 KB) | `messages_part1.csv`, `messages_part2.csv`, … |
+| `channel_<id>.csv` (> 500 KB) | `channel_<id>_part1.csv`, `channel_<id>_part2.csv`, … |
+| `messages.json` (> 500 KB) | `messages_part1.json`, `messages_part2.json`, … |
+| `channel_<id>.json` (> 500 KB) | `channel_<id>_part1.json`, `channel_<id>_part2.json`, … |
+
+Each part file is independently usable — CSV parts include the header row, and JSON parts are valid JSON arrays.
+
+The original combined file is kept alongside the parts. Configure the limit in `.env`:
+
+```env
+# Maximum file size in KB before splitting (default: 500)
+MAX_FILE_SIZE_KB=500
+```
+
+Terminal output shows which files were split:
+
+```
+messages.csv exceeded 500 KB, split into 2 parts: messages_part1.csv, messages_part2.csv
+```
 
 ---
 

@@ -66,6 +66,13 @@ if output_dir and not os.path.isdir(output_dir):
     print(f"WARNING: OUTPUT_DIR '{output_dir}' does not exist. Files will be saved to the current directory.")
     output_dir = ''
 
+# --- Max file size (in KB) ---
+_raw_max_file_size = os.environ.get('MAX_FILE_SIZE_KB', '500')
+try:
+    max_file_size_kb = int(_raw_max_file_size)
+except ValueError:
+    max_file_size_kb = 500
+
 # --- Bot filtering ---
 def _parse_bool(value, default: bool = False) -> bool:
     if not value:

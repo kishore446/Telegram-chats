@@ -3,10 +3,45 @@
 # Configure credentials in config.py before running.
 
 import json
+import math
 import os
 import re
 from telethon.sync import TelegramClient
 import config
+
+max_file_size_bytes = getattr(config, 'max_file_size_kb', 500) * 1024
+
+
+def _split_json_file(filepath, messages):
+    """Split a JSON file into multiple parts if it exceeds max_file_size_bytes.
+
+    messages must be a list of message dicts (the content already written to filepath).
+    Returns a list of part file paths if splitting occurred, or an empty list
+    if the file is within the size limit.
+    """
+    file_size = os.path.getsize(filepath)
+    if file_size <= max_file_size_bytes:
+        return []
+
+    if not messages:
+        return []
+
+    avg_msg_size = file_size / len(messages)
+    # Use a 0.95 safety factor so parts stay comfortably under the limit
+    msgs_per_part = max(1, math.floor(max_file_size_bytes * 0.95 / avg_msg_size))
+
+    base, ext = os.path.splitext(filepath)
+    part_files = []
+    part_num = 1
+    for start in range(0, len(messages), msgs_per_part):
+        chunk = messages[start:start + msgs_per_part]
+        part_path = f'{base}_part{part_num}{ext}'
+        with open(part_path, 'w', encoding='utf-8') as f:
+            json.dump(chunk, f, ensure_ascii=False, indent=2)
+        part_files.append(part_path)
+        part_num += 1
+
+    return part_files
 
 output_base = getattr(config, 'output_dir', '')
 OUTPUT_FILE = os.path.join(output_base, 'messages.json') if output_base else 'messages.json'
@@ -70,6 +105,15 @@ try:
 
     saved_files = [OUTPUT_FILE]
 
+    # Split combined file if it exceeds the size limit
+    if os.path.getsize(OUTPUT_FILE) > max_file_size_bytes:
+        all_msgs_list = [msg for msgs in all_messages.values() for msg in msgs]
+        parts = _split_json_file(OUTPUT_FILE, all_msgs_list)
+        if parts:
+            part_names = ', '.join(parts)
+            print(f"{OUTPUT_FILE} exceeded {config.max_file_size_kb} KB, split into {len(parts)} parts: {part_names}")
+            saved_files.extend(parts)
+
     # Write per-channel files
     for channel_key, messages in all_messages.items():
         safe_name = re.sub(r'[^\w\-]', '_', channel_key)
@@ -77,6 +121,13 @@ try:
         with open(per_channel_file, 'w', encoding='utf-8') as f:
             json.dump(messages, f, ensure_ascii=False, indent=2)
         saved_files.append(per_channel_file)
+
+        # Split per-channel file if it exceeds the size limit
+        parts = _split_json_file(per_channel_file, messages)
+        if parts:
+            part_names = ', '.join(parts)
+            print(f"{per_channel_file} exceeded {config.max_file_size_kb} KB, split into {len(parts)} parts: {part_names}")
+            saved_files.extend(parts)
 
     total = sum(len(v) for v in all_messages.values())
     print(f"\nDone! {total} messages total")
