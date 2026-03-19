@@ -26,6 +26,9 @@ all_messages = {}
 
 try:
     with TelegramClient(config.session_name, config.api_id, config.api_hash) as client:
+        # Populate Telethon's entity cache so numeric channel IDs resolve correctly
+        client.get_dialogs()
+
         for channel in channels:
             print(f"\nFetching messages from: {channel}")
             channel_key = str(channel)
