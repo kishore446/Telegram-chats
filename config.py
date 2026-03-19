@@ -60,6 +60,12 @@ else:
     print("WARNING: No channels configured. Set CHANNELS in your .env file.")
     print("  Example: CHANNELS=mychannel,-1001234567890")
 
+# --- Output directory ---
+output_dir = os.environ.get('OUTPUT_DIR', '').strip()
+if output_dir and not os.path.isdir(output_dir):
+    print(f"WARNING: OUTPUT_DIR '{output_dir}' does not exist. Files will be saved to the current directory.")
+    output_dir = ''
+
 # --- Bot filtering ---
 def _parse_bool(value, default: bool = False) -> bool:
     if not value:

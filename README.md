@@ -62,6 +62,7 @@ CHANNELS=mychannel,-1001234567890
 SESSION_NAME=anon
 SKIP_BOTS=False
 ONLY_BOTS=False
+OUTPUT_DIR=
 ```
 
 > ⚠️ **Never share or commit your `.env` file.** It is already listed in `.gitignore` and will not be included in git commits.
@@ -114,6 +115,27 @@ python export_to_json.py
 # { "channel1": [{...}, ...], "channel2": [{...}, ...] }
 # Each message includes: channel, id, date, sender_id, sender_name, is_bot, text, views, forwards, media
 ```
+
+---
+
+## 📂 Output Directory
+
+By default, exported files (`messages.csv`, `messages.json`) are saved to the **current working directory**. You can change this by setting `OUTPUT_DIR` in your `.env` file.
+
+**Termux users** — save directly to your Downloads folder:
+
+```env
+OUTPUT_DIR=/sdcard/Download
+```
+
+Then run your export as usual:
+
+```bash
+python export_to_csv.py
+# Creates /sdcard/Download/messages.csv
+```
+
+> ⚠️ If the specified directory does not exist, a warning is printed and files are saved to the current directory instead.
 
 ---
 

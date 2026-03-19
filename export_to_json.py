@@ -3,10 +3,11 @@
 # Configure credentials in config.py before running.
 
 import json
+import os
 from telethon.sync import TelegramClient
 import config
 
-OUTPUT_FILE = 'messages.json'
+OUTPUT_FILE = os.path.join(config.output_dir, 'messages.json') if config.output_dir else 'messages.json'
 
 # Resolve channel list (supports both `channels` list and legacy `channel` single value)
 channels = getattr(config, 'channels', None)

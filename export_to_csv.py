@@ -3,10 +3,11 @@
 # Configure credentials in config.py before running.
 
 import csv
+import os
 from telethon.sync import TelegramClient
 import config
 
-OUTPUT_FILE = 'messages.csv'
+OUTPUT_FILE = os.path.join(config.output_dir, 'messages.csv') if config.output_dir else 'messages.csv'
 
 # Resolve channel list (supports both `channels` list and legacy `channel` single value)
 channels = getattr(config, 'channels', None)
