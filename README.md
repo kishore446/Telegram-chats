@@ -105,7 +105,8 @@ python export_messages.py
 ### Export to CSV
 ```bash
 python export_to_csv.py
-# Creates messages.csv with columns: channel, id, date, sender_id, sender_name, is_bot, text
+# Creates messages.csv with all messages (columns: channel, id, date, sender_id, sender_name, is_bot, text)
+# Also creates a separate file per channel: channel_<id>.csv
 ```
 
 ### Export to JSON
@@ -113,6 +114,7 @@ python export_to_csv.py
 python export_to_json.py
 # Creates messages.json grouped by channel:
 # { "channel1": [{...}, ...], "channel2": [{...}, ...] }
+# Also creates a separate file per channel: channel_<id>.json
 # Each message includes: channel, id, date, sender_id, sender_name, is_bot, text, views, forwards, media
 ```
 
@@ -120,7 +122,7 @@ python export_to_json.py
 
 ## 📂 Output Directory
 
-By default, exported files (`messages.csv`, `messages.json`) are saved to the **current working directory**. You can change this by setting `OUTPUT_DIR` in your `.env` file.
+By default, exported files are saved to the **current working directory**. You can change this by setting `OUTPUT_DIR` in your `.env` file.
 
 **Termux users** — save directly to your Downloads folder:
 
@@ -132,8 +134,22 @@ Then run your export as usual:
 
 ```bash
 python export_to_csv.py
-# Creates /sdcard/Download/messages.csv
+# Creates /sdcard/Download/messages.csv        ← combined (all channels)
+# Creates /sdcard/Download/channel_-1003730302765.csv  ← per channel
+# Creates /sdcard/Download/channel_-1003626740685.csv  ← per channel
+# ...
 ```
+
+### Per-channel files
+
+Each export script creates **two sets of files**:
+
+| File | Content |
+|---|---|
+| `messages.csv` / `messages.json` | Combined — all channels in one file |
+| `channel_<id>.csv` / `channel_<id>.json` | Per-channel — one file per channel |
+
+The per-channel files make it easy to open just the messages from a specific channel. All files are saved to `OUTPUT_DIR` if configured.
 
 > ⚠️ If the specified directory does not exist, a warning is printed and files are saved to the current directory instead.
 
