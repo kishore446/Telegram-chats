@@ -1,3 +1,6 @@
+# Never commit secrets!
+.env
+
 # Telethon session files (contain auth tokens — never commit these)
 *.session
 *.session-journal
