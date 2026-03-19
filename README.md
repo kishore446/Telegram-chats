@@ -41,25 +41,30 @@ All scripts require a Telegram API `api_id` and `api_hash`:
 
 ## ⚙️ Configuration
 
-Edit `config.py` with your credentials **before** running any script:
+### Using a `.env` file (recommended)
 
-```python
-api_id   = 12345678          # integer from my.telegram.org
-api_hash = 'YOUR_API_HASH'  # string from my.telegram.org
+Credentials are loaded from a `.env` file so they are never accidentally committed to git.
 
-# Export from one or more channels (username or numeric ID):
-channels = [
-    'mychannel',
-    'another_channel',
-    -1001234567890,
-]
+```bash
+# 1. Copy the example file
+cp .env.example .env
 
-# Bot filtering (optional):
-skip_bots = False   # Set True to exclude bot messages
-only_bots = False   # Set True to export ONLY bot messages
+# 2. Edit .env with your real credentials (nano, vim, or any text editor)
+nano .env
 ```
 
-> **Backward compatibility:** If you previously used `channel = 'username'` (single value), the scripts will still work without any changes.
+`.env` contents to fill in:
+
+```
+API_ID=12345678
+API_HASH=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+CHANNELS=mychannel,-1001234567890
+SESSION_NAME=anon
+SKIP_BOTS=False
+ONLY_BOTS=False
+```
+
+> ⚠️ **Never share or commit your `.env` file.** It is already listed in `.gitignore` and will not be included in git commits.
 
 ### Finding channel IDs
 
@@ -69,7 +74,7 @@ Run `list_channels.py` to see all channels/groups you are a member of:
 python list_channels.py
 ```
 
-Copy the ID or username shown into the `channels` list in `config.py`.
+Copy the ID or username shown into the `CHANNELS` line in `.env`.
 
 ---
 
@@ -78,7 +83,7 @@ Copy the ID or username shown into the `channels` list in `config.py`.
 | Script | Description |
 |---|---|
 | `setup_termux.sh` | One-command Termux environment setup |
-| `config.py` | Central credentials & channel configuration |
+| `config.py` | Loads credentials & channel configuration from `.env` |
 | `list_channels.py` | List all channels/groups you are a member of |
 | `export_messages.py` | Print channel messages to the terminal |
 | `export_to_csv.py` | Export messages to `messages.csv` |
@@ -114,13 +119,13 @@ python export_to_json.py
 
 ## 🤖 Bot Filtering
 
-Control whether bot messages are included in the export by setting flags in `config.py`:
+Control whether bot messages are included in the export by setting flags in `.env`:
 
 | Setting | Effect |
 |---|---|
-| `skip_bots = False` (default) | All messages are exported |
-| `skip_bots = True` | Messages from bots are excluded |
-| `only_bots = True` | Only messages from bots are exported |
+| `SKIP_BOTS=False` (default) | All messages are exported |
+| `SKIP_BOTS=True` | Messages from bots are excluded |
+| `ONLY_BOTS=True` | Only messages from bots are exported |
 
 ---
 
@@ -131,12 +136,14 @@ Control whether bot messages are included in the export by setting flags in `con
 - **Rate limits:** Telegram enforces rate limits. Exporting large channels may take time — the scripts print progress every 100 messages.
 - **Multiple channels:** If one channel fails (e.g. you are not a member), the scripts continue with the remaining channels.
 - **Session files:** `.session` files contain authentication tokens. They are listed in `.gitignore` and will **not** be committed to this repository.
+- **Secrets safety:** Your `.env` file is listed in `.gitignore`. Running `git pull` will never overwrite your credentials.
 
 ---
 
 ## 📦 Dependencies
 
 - [Telethon](https://docs.telethon.dev/) — pure Python Telegram MTProto client
+- [python-dotenv](https://pypi.org/project/python-dotenv/) — loads `.env` files into environment variables
 
 Install with:
 ```bash
