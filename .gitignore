@@ -1,0 +1,12 @@
+# Telethon session files (contain auth tokens — never commit these)
+*.session
+*.session-journal
+
+# Exported data files
+messages.csv
+messages.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
