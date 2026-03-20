@@ -88,6 +88,7 @@ Copy the ID or username shown into the `CHANNELS` line in `.env`.
 | `config.py` | Loads credentials & channel configuration from `.env` |
 | `list_channels.py` | List all channels/groups you are a member of |
 | `interactive_export.py` | **Interactive** on-screen menu to pick channels and export format |
+| `clean_exports.py` | **Standalone** script to delete all previously exported files |
 | `export_messages.py` | Print channel messages to the terminal |
 | `export_to_csv.py` | Export messages to `messages.csv` |
 | `export_to_json.py` | Export messages to `messages.json` (includes views, forwards, media) |
@@ -100,7 +101,46 @@ Run the interactive script for a guided, menu-driven export — no need to edit 
 python interactive_export.py
 ```
 
-**Step 1 — Channel list:**
+**Step 1 — Main menu:**
+```
+══════════════════════════════════════════════════
+  Telegram Chat Export — Interactive Mode
+══════════════════════════════════════════════════
+
+  1. Export messages
+  2. Clear all exported files
+  3. Quit
+
+Choose [1-3]:
+```
+
+**Option 2 — Clear all exported files:**
+
+Lists every previously exported file with its size and asks for confirmation:
+
+```
+Found 8 exported file(s):
+  📄 messages.csv (902 KB)
+  📄 messages.json (850 KB)
+  📄 channel_-1003730302765.csv (12 KB)
+  📄 channel_-1003626740685.csv (180 KB)
+  📄 channel_-1003855571051.csv (150 KB)
+  📄 channel_-1003809706320.csv (520 KB)
+  📄 channel_-1003809706320_part1.csv (480 KB)
+  📄 channel_-1003809706320_part2.csv (40 KB)
+
+Delete all 8 file(s)? [y/N]: y
+✅ Cleared 8 exported file(s)!
+
+Also clear exported files from /sdcard/Download? [y/N]: y
+✅ Cleared 6 file(s) from /sdcard/Download/
+```
+
+After clearing, you return to the main menu.
+
+**Option 1 — Export messages:**
+
+**Step 2 — Channel list:**
 ```
 Connecting to Telegram...
 
@@ -115,7 +155,22 @@ Your channels and groups:
 ──────────────────────────────────────────────────
 ```
 
-**Step 2 — Select channels:**
+**Step 2 — Channel list:**
+```
+Connecting to Telegram...
+
+Your channels and groups:
+──────────────────────────────────────────────────
+  #    Name                           ID                     Type
+──────────────────────────────────────────────────
+  1    My Channel                     -1003730302765         Channel
+  2    Study Group                    -1003626740685         Group (super)
+  3    News Updates                   -1003855571051         Channel
+  4    Friends Chat                   -1003809706320         Group (super)
+──────────────────────────────────────────────────
+```
+
+**Step 3 — Select channels:**
 ```
 Enter channel numbers to export (comma-separated), or 'all' for everything:
   Examples:  2      1,3      1-3      all
@@ -132,7 +187,7 @@ Enter channel numbers to export (comma-separated), or 'all' for everything:
 | `all` or `a` | All channels |
 | `q` or `quit` | Exit |
 
-**Step 3 — Choose format:**
+**Step 4 — Choose format:**
 ```
 Export format:
   1. CSV  (messages.csv)
@@ -143,7 +198,7 @@ Export format:
 Choose [1-4]: 3
 ```
 
-**Step 4 — Export runs with progress output, then summary:**
+**Step 5 — Export runs with progress output, then summary:**
 ```
 ✅ Done! Exported 269 messages from 2 channel(s).
 
@@ -156,13 +211,47 @@ Files saved:
   📄 channel_-1003855571051.json (130 KB)
 ```
 
-**Step 5 — Optional copy to Downloads (Android):**
+**Step 6 — Optional copy to Downloads (Android):**
 ```
 Copy files to /sdcard/Download? [Y/n]: y
 ✅ 6 file(s) copied to /sdcard/Download/
 ```
 
 > The copy prompt only appears when `/sdcard/Download` exists (i.e. on Android/Termux).
+
+### Clean Up Exported Files
+
+Use `clean_exports.py` to delete all previously exported files without opening the interactive menu:
+
+```bash
+python clean_exports.py
+```
+
+It scans the output directory (and `/sdcard/Download` if present) for all exported files, lists them with sizes, and asks for confirmation before deleting:
+
+```
+Found 8 exported file(s) in .:
+  📄 messages.csv (902 KB)
+  📄 messages.json (850 KB)
+  📄 channel_-1003730302765.csv (12 KB)
+  📄 channel_-1003809706320_part1.csv (480 KB)
+  ...
+
+Delete all 8 file(s)? [y/N]: y
+✅ Cleared 8 file(s) from ./
+
+Also clear exported files from /sdcard/Download? [y/N]: y
+✅ Cleared 6 file(s) from /sdcard/Download/
+```
+
+Use the `--yes` (or `-y`) flag to skip all confirmation prompts — useful for scripting:
+
+```bash
+python clean_exports.py --yes
+python clean_exports.py -y
+```
+
+> Only files matching the export patterns are deleted (`messages.csv`, `channel_*.json`, etc.). Scripts, `.env`, `.session`, and other files are never touched.
 
 ### List your channels/groups
 ```bash

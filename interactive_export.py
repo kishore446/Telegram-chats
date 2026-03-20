@@ -8,6 +8,7 @@
 # On-screen menu lets you pick which channels to export and in what format.
 
 import csv
+import glob as _glob
 import json
 import math
 import os
@@ -32,6 +33,104 @@ ONLY_BOTS = getattr(config, 'only_bots', False)
 CSV_FIELDNAMES = ['channel', 'id', 'date', 'sender_id', 'sender_name', 'is_bot', 'text']
 
 SEP = '\u2500' * 50  # ──────────────────────────────────────────────────────
+WIDE_SEP = '\u2550' * 50  # ══════════════════════════════════════════════════
+
+# Glob patterns that match exported files (never matches .py, .env, .session, etc.)
+EXPORT_PATTERNS = [
+    'messages.csv',
+    'messages.json',
+    'messages_part*.csv',
+    'messages_part*.json',
+    'channel_*.csv',
+    'channel_*.json',
+    'channel_*_part*.csv',
+    'channel_*_part*.json',
+]
+
+
+# ---------------------------------------------------------------------------
+# File-size formatting helper
+# ---------------------------------------------------------------------------
+
+def fmt_size(size_bytes):
+    """Return a human-readable file size string (e.g. '902 KB', '1.4 MB')."""
+    if size_bytes >= 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    return f"{size_bytes / 1024:.0f} KB"
+
+
+# ---------------------------------------------------------------------------
+# Export-file discovery and cleanup helpers
+# ---------------------------------------------------------------------------
+
+def find_exported_files(directory):
+    """Return a sorted, deduplicated list of exported file paths in *directory*."""
+    found = []
+    seen = set()
+    for pattern in EXPORT_PATTERNS:
+        for path in sorted(_glob.glob(os.path.join(directory, pattern))):
+            if os.path.isfile(path) and path not in seen:
+                seen.add(path)
+                found.append(path)
+    return found
+
+
+def clear_exported_files():
+    """Interactive flow: list exported files, confirm, then delete them."""
+    # Empty OUTPUT_BASE means "current directory" (same convention as _out())
+    output_dir = OUTPUT_BASE if OUTPUT_BASE else '.'
+
+    files = find_exported_files(output_dir)
+
+    if not files:
+        print("\nNo exported files found. Nothing to clean!")
+    else:
+        print(f"\nFound {len(files)} exported file(s):")
+        for path in files:
+            try:
+                size = os.path.getsize(path)
+                print(f"  \U0001f4c4 {os.path.basename(path)} ({fmt_size(size)})")
+            except OSError:
+                print(f"  \U0001f4c4 {os.path.basename(path)}")
+
+        print()
+        try:
+            answer = input(f"Delete all {len(files)} file(s)? [y/N]: ").strip().lower()
+        except EOFError:
+            answer = 'n'
+
+        if answer in ('y', 'yes'):
+            deleted = 0
+            for path in files:
+                try:
+                    os.remove(path)
+                    deleted += 1
+                except Exception as e:
+                    print(f"  \u26a0\ufe0f  Could not delete {path}: {e}")
+            print(f"\u2705 Cleared {deleted} exported file(s)!")
+        else:
+            print("Cancelled. No files deleted.")
+            return  # skip Downloads prompt if user cancelled
+
+    # Offer to also clear /sdcard/Download
+    downloads = '/sdcard/Download'
+    if os.path.isdir(downloads):
+        dl_files = find_exported_files(downloads)
+        if dl_files:
+            print()
+            try:
+                answer = input(f"Also clear exported files from {downloads}? [y/N]: ").strip().lower()
+            except EOFError:
+                answer = 'n'
+            if answer in ('y', 'yes'):
+                deleted = 0
+                for path in dl_files:
+                    try:
+                        os.remove(path)
+                        deleted += 1
+                    except Exception as e:
+                        print(f"  \u26a0\ufe0f  Could not delete {path}: {e}")
+                print(f"\u2705 Cleared {deleted} file(s) from {downloads}/")
 
 
 # ---------------------------------------------------------------------------
@@ -290,6 +389,29 @@ def write_json(all_json_msgs, selected_channels):
 # Interactive prompts
 # ---------------------------------------------------------------------------
 
+def prompt_main_menu():
+    """Show the main menu and return the user's choice: 'export', 'clear', or 'quit'."""
+    print()
+    print(WIDE_SEP)
+    print("  Telegram Chat Export \u2014 Interactive Mode")
+    print(WIDE_SEP)
+    print()
+    print("  1. Export messages")
+    print("  2. Clear all exported files")
+    print("  3. Quit")
+    print()
+
+    choice_map = {'1': 'export', '2': 'clear', '3': 'quit'}
+    while True:
+        try:
+            raw = input("Choose [1-3]: ").strip()
+        except EOFError:
+            raw = '3'
+        if raw in choice_map:
+            return choice_map[raw]
+        print("  \u26a0\ufe0f  Please enter 1, 2, or 3.")
+
+
 def prompt_channels(channels):
     """Display channel list and return user-selected (name, full_id, kind) tuples."""
     print()
@@ -381,73 +503,87 @@ def main():
     if SKIP_BOTS and ONLY_BOTS:
         print("Warning: SKIP_BOTS and ONLY_BOTS are both True — no messages will be exported.")
 
-    print("Connecting to Telegram...")
-
     try:
-        with TelegramClient(config.session_name, config.api_id, config.api_hash) as client:
-            # Populate entity cache and fetch channel list
-            channels = fetch_channels(client)
+        while True:
+            choice = prompt_main_menu()
 
-            if not channels:
-                print("No channels or groups found. Make sure you are a member of at least one channel.")
-                return
+            if choice == 'quit':
+                print("\nBye!")
+                sys.exit(0)
 
-            # Step 1 — channel selection
-            selected = prompt_channels(channels)
-            if not selected:
-                print("No channels selected. Exiting.")
-                return
+            if choice == 'clear':
+                clear_exported_files()
+                continue  # return to main menu
 
-            # Step 2 — format selection
-            fmt = prompt_format()
+            # choice == 'export'
+            print("\nConnecting to Telegram...")
 
-            # Step 3 — export
-            print()
-            all_csv_rows = {}
-            all_json_msgs = {}
-            total_messages = 0
+            with TelegramClient(config.session_name, config.api_id, config.api_hash) as client:
+                # Populate entity cache and fetch channel list
+                channels = fetch_channels(client)
 
-            for name, full_id, kind in selected:
-                print(f"\nFetching messages from: {name} ({full_id})")
-                try:
-                    csv_rows, json_msgs, count = export_channel(client, full_id, fmt)
-                except Exception as e:
-                    print(f"  ⚠️  Error fetching from {name}: {e}")
+                if not channels:
+                    print("No channels or groups found. Make sure you are a member of at least one channel.")
                     continue
 
-                print(f"  Done: {count} messages from {name}")
-                total_messages += count
+                # Step 1 — channel selection
+                selected = prompt_channels(channels)
+                if not selected:
+                    print("No channels selected. Exiting.")
+                    continue
 
-                if fmt in ('csv', 'both'):
-                    all_csv_rows[str(full_id)] = csv_rows
-                if fmt in ('json', 'both'):
-                    all_json_msgs[str(full_id)] = json_msgs
+                # Step 2 — format selection
+                fmt = prompt_format()
 
-            # Step 4 — write files
-            saved_files = []
-
-            if fmt in ('csv', 'both') and all_csv_rows:
-                saved_files.extend(write_csv(all_csv_rows, selected))
-
-            if fmt in ('json', 'both') and all_json_msgs:
-                saved_files.extend(write_json(all_json_msgs, selected))
-
-            # Step 5 — summary
-            print()
-            print(f"✅ Done! Exported {total_messages} messages from {len(selected)} channel(s).")
-
-            if saved_files:
+                # Step 3 — export
                 print()
-                print("Files saved:")
-                for path in saved_files:
-                    try:
-                        size_kb = os.path.getsize(path) / 1024
-                        print(f"  📄 {path} ({size_kb:.0f} KB)")
-                    except OSError:
-                        print(f"  📄 {path}")
+                all_csv_rows = {}
+                all_json_msgs = {}
+                total_messages = 0
 
-                # Step 6 — offer to copy to Downloads
-                prompt_copy_to_downloads(saved_files)
+                for name, full_id, kind in selected:
+                    print(f"\nFetching messages from: {name} ({full_id})")
+                    try:
+                        csv_rows, json_msgs, count = export_channel(client, full_id, fmt)
+                    except Exception as e:
+                        print(f"  ⚠️  Error fetching from {name}: {e}")
+                        continue
+
+                    print(f"  Done: {count} messages from {name}")
+                    total_messages += count
+
+                    if fmt in ('csv', 'both'):
+                        all_csv_rows[str(full_id)] = csv_rows
+                    if fmt in ('json', 'both'):
+                        all_json_msgs[str(full_id)] = json_msgs
+
+                # Step 4 — write files
+                saved_files = []
+
+                if fmt in ('csv', 'both') and all_csv_rows:
+                    saved_files.extend(write_csv(all_csv_rows, selected))
+
+                if fmt in ('json', 'both') and all_json_msgs:
+                    saved_files.extend(write_json(all_json_msgs, selected))
+
+                # Step 5 — summary
+                print()
+                print(f"✅ Done! Exported {total_messages} messages from {len(selected)} channel(s).")
+
+                if saved_files:
+                    print()
+                    print("Files saved:")
+                    for path in saved_files:
+                        try:
+                            size_kb = os.path.getsize(path) / 1024
+                            print(f"  📄 {path} ({size_kb:.0f} KB)")
+                        except OSError:
+                            print(f"  📄 {path}")
+
+                    # Step 6 — offer to copy to Downloads
+                    prompt_copy_to_downloads(saved_files)
+
+            # Return to main menu after a successful export
 
     except KeyboardInterrupt:
         print("\n\nInterrupted. Goodbye!")
