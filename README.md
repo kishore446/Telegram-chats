@@ -87,9 +87,82 @@ Copy the ID or username shown into the `CHANNELS` line in `.env`.
 | `setup_termux.sh` | One-command Termux environment setup |
 | `config.py` | Loads credentials & channel configuration from `.env` |
 | `list_channels.py` | List all channels/groups you are a member of |
+| `interactive_export.py` | **Interactive** on-screen menu to pick channels and export format |
 | `export_messages.py` | Print channel messages to the terminal |
 | `export_to_csv.py` | Export messages to `messages.csv` |
 | `export_to_json.py` | Export messages to `messages.json` (includes views, forwards, media) |
+
+### Interactive Export (Recommended for Termux)
+
+Run the interactive script for a guided, menu-driven export — no need to edit `.env` to set `CHANNELS`:
+
+```bash
+python interactive_export.py
+```
+
+**Step 1 — Channel list:**
+```
+Connecting to Telegram...
+
+Your channels and groups:
+──────────────────────────────────────────────────
+  #    Name                           ID                     Type
+──────────────────────────────────────────────────
+  1    My Channel                     -1003730302765         Channel
+  2    Study Group                    -1003626740685         Group (super)
+  3    News Updates                   -1003855571051         Channel
+  4    Friends Chat                   -1003809706320         Group (super)
+──────────────────────────────────────────────────
+```
+
+**Step 2 — Select channels:**
+```
+Enter channel numbers to export (comma-separated), or 'all' for everything:
+  Examples:  2      1,3      1-3      all
+  Type 'q' or 'quit' to exit.
+
+> 1,3
+```
+
+| Input | Meaning |
+|---|---|
+| `2` | Channel #2 only |
+| `1,3,4` | Channels 1, 3, and 4 |
+| `1-3` | Channels 1 through 3 |
+| `all` or `a` | All channels |
+| `q` or `quit` | Exit |
+
+**Step 3 — Choose format:**
+```
+Export format:
+  1. CSV  (messages.csv)
+  2. JSON (messages.json)
+  3. Both
+  4. Terminal only (print to screen)
+
+Choose [1-4]: 3
+```
+
+**Step 4 — Export runs with progress output, then summary:**
+```
+✅ Done! Exported 269 messages from 2 channel(s).
+
+Files saved:
+  📄 messages.csv (120 KB)
+  📄 channel_-1003730302765.csv (12 KB)
+  📄 channel_-1003855571051.csv (108 KB)
+  📄 messages.json (145 KB)
+  📄 channel_-1003730302765.json (15 KB)
+  📄 channel_-1003855571051.json (130 KB)
+```
+
+**Step 5 — Optional copy to Downloads (Android):**
+```
+Copy files to /sdcard/Download? [Y/n]: y
+✅ 6 file(s) copied to /sdcard/Download/
+```
+
+> The copy prompt only appears when `/sdcard/Download` exists (i.e. on Android/Termux).
 
 ### List your channels/groups
 ```bash
